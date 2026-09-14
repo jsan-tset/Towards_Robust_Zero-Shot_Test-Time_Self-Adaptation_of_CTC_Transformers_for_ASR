@@ -7,8 +7,8 @@ from espnet2.bin.s2t_inference_ctc import Speech2TextGreedySearch
 from espnet2.layers.create_adapter_fn import create_lora_adapter
 import espnetez as ez
 
-if len(sys.argv)!=7:
-    sys.exit("%s <audio_path> <chkp_path:path/to/5epoch.pth> <output_dir> <model> <lora_rank> <lora_alpha>")
+if len(sys.argv)!=8:
+    sys.exit("%s <audio_path> <chkp_path:path/to/5epoch.pth> <output_dir> <model> <lora_rank> <lora_alpha> <language>")
     
 AUDIO_PATH = sys.argv[1]
 CHKP_PATH = sys.argv[2]
@@ -16,6 +16,7 @@ OUTPUT_DIR = sys.argv[3]
 MODEL = sys.argv[4]
 LORA_RANK=int(sys.argv[5])
 LORA_ALPHA=int(sys.argv[6])
+LANG = sys.argv[7]
 
 EPOCH_NUM = CHKP_PATH.split('/')[-1].split('epoch')[0]
 
@@ -30,7 +31,7 @@ model = Speech2TextGreedySearch.from_pretrained(
     MODEL,
     device="cuda",
     use_flash_attn=False,   # set to True for better efficiency if flash attn is installed and dtype is float16 or bfloat16
-    lang_sym='<eng>',
+    lang_sym=f'<{LANG}>',
     task_sym='<asr>',
 )
 

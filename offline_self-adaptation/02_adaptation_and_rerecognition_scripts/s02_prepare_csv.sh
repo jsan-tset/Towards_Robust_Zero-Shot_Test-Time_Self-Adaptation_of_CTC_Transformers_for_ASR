@@ -10,7 +10,7 @@ VMOD=$(echo $MODEL | awk -F'_' '{print $3}')
 # baseline_chunked.$VMOD is the directory with the transcriptions
 if [[ ! -e baseline_chunked.$VMOD ]]
 then
-    ln -s path/to/transcriptions .
+    ln -s <path/to/transcriptions> .
 fi
 
 for TASK in LHCP-2020 LHCP-2022

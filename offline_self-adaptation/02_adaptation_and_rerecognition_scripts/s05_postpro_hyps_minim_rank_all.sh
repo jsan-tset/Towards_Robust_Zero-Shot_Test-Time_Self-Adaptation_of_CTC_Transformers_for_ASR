@@ -6,13 +6,14 @@ export LC_ALL=C.UTF-8
 
 SCR=~/asr-scripts/asr-scripts/lm/prepro
 
-for MODEL in "espnet/owsm_ctc_v3.1_1B" "espnet/owsm_ctc_v3.2_ft_1B" "espnet/owsm_ctc_v4_1B"
+for MODEL in "espnet/owsm_ctc_v3.2_ft_1B" "espnet/owsm_ctc_v3.2_ft_1B" "espnet/owsm_ctc_v4_1B"
 do
 VMOD=$(echo $MODEL | awk -F'_' '{print $3}')
 
 for TASK in LHCP-2020 LHCP-2022
 do
-SET=test
+    for SET in test
+    do
 
 for LR in 0.003 
 do
@@ -38,7 +39,7 @@ do
     sed -e 's/<oov>//g' -e 's/ uh / /g' -e 's/ um / /g' $TXT.post | sed -e 's/ uh / /g' -e 's/ um / /g' > $HYP
 done
 
-for EP in 2 #{6..10}
+for EP in {1..5}
 do
 for HYP in $(find out_hyp.$VMOD/lr$LR.r$RANK.a$ALPHA/$TASK/$SET/[0-9]*ep$EP.txt.post.clean | sort -V)
 do
@@ -46,6 +47,7 @@ do
 done > out_hyp.$VMOD/lr$LR.r$RANK.a$ALPHA/$TASK/$SET/all.ep$EP.txt.post.clean
 done
 
+done
 done
 done
 done

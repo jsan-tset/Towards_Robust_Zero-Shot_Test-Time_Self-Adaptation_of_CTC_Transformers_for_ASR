@@ -35,8 +35,6 @@ do
 
 for EP in {1..5}
 do
-    NAME=wer.$VMOD.$TASK.$SET.lr$LR.r$RANK.a$ALPHA.ep$EP
-    qsubmit -n $NAME -m 3 -o logs_wer \
         scripts/calc_wer_qsub.sh \
         $VMOD $TASK $SET $LR $RANK $ALPHA $EP $RES
 

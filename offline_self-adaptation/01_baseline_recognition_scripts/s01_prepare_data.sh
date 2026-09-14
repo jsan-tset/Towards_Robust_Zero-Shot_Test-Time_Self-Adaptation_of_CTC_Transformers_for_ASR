@@ -2,6 +2,7 @@
 
 set -xe
 
+export LC_ALL=C.UTF-8
 
 mkdir -p lists
 for TASK in LHCP-2020 LHCP-2022

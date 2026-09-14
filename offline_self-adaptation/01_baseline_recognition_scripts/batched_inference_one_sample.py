@@ -2,12 +2,13 @@ from espnet2.bin.s2t_inference_ctc_jsj import Speech2TextGreedySearch
 import sys
 import os
 
-if len(sys.argv)!=4:
-    sys.exit('%s <audio_path> <output_dir> <model>')
+if len(sys.argv)!=5:
+    sys.exit('%s <audio_path> <output_dir> <model> <lang>')
     
 AUDIO_PATH = sys.argv[1]
 OUTPUT_DIR = sys.argv[2]
 MODEL = sys.argv[3]
+LANG = sys.argv[4]
 
 #################
 #
@@ -17,7 +18,7 @@ s2t = Speech2TextGreedySearch.from_pretrained(
     MODEL,
     device="cuda",
     use_flash_attn=False,   # set to True for better efficiency if flash attn is installed and dtype is float16 or bfloat16
-    lang_sym='<eng>',
+    lang_sym=f'<{LANG}>',
     task_sym='<asr>',
 )
 

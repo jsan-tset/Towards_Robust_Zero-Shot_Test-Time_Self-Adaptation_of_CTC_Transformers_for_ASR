@@ -19,10 +19,6 @@ do
             BNAME=$(basename $SPL .wav)
             if [[ ! -s baseline_chunked.$VMOD/$TASK/$SET/$BNAME/$BNAME.000.txt ]]
             then
-            NAME=R_ctc_${VMOD}_${TASK}_${SET}_${BNAME}_1sample
-            qsubmit -n $NAME \
-                -o logs/$NAME.log \
-                -m 20 -gmem 10G \
                 scripts/wrp2bax_inf_one_sample.sh $SPL baseline_chunked.$VMOD $MODEL
             fi
 
