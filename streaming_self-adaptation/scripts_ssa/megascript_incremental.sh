@@ -14,9 +14,9 @@ iii(){
 }
 METHOD=incremental
 
-if [[ $# != 6 ]]
+if [[ $# != 8 ]]
 then
-    echo "$0 <model> <rank> <max_epoch_per_ft> <lr> <chunk_size> <sample:wav>"
+    echo "$0 <model> <rank> <max_epoch_per_ft> <lr> <chunk_size> <sample:wav> <out_dir> <language>"
     exit 1
 fi
 
@@ -27,6 +27,13 @@ EPOCH=$3
 LR=$4
 CHUNK_SIZE=$5
 FILE=$6
+OUTDIR=$7
+LANG=$8
+
+if [[ $OUTDIR == "" ]]
+then
+    OUTDIR="."
+fi
 
 # Params
 CONTEXT_LEN=4
@@ -43,13 +50,13 @@ LOG_FILE=$EXP_NAME.$METHOD.log
 
 # Directories
 DIR_COMM=$METHOD.$VMOD/ep$EPOCH.chsize$CHUNK_SIZE.lr$LR.r$LORA_RANK
-DIR_AUDIO_CHUNK=chunked_audio/$DIR_COMM
-DIR_ADAPT_HYP=out_txt_adapt/$DIR_COMM
-DIR_CSV=csv_adapt/$DIR_COMM/$SPL_NAME
-DIR_HYP=out_hyp/$DIR_COMM/$SPL_NAME
-DIR_EXP=exps/$DIR_COMM/$SPL_NAME; mkdir -p $DIR_EXP
-DIR_LST=lists/$DIR_COMM; mkdir -p $DIR_LST
-DIR_LOG=logs/$DIR_COMM; mkdir -p $DIR_LOG
+DIR_AUDIO_CHUNK=$OUTDIR/chunked_audio/$DIR_COMM
+DIR_ADAPT_HYP=$OUTDIR/out_txt_adapt/$DIR_COMM
+DIR_CSV=$OUTDIR/csv_adapt/$DIR_COMM/$SPL_NAME
+DIR_HYP=$OUTDIR/out_hyp/$DIR_COMM/$SPL_NAME
+DIR_EXP=$OUTDIR/exps/$DIR_COMM/$SPL_NAME; mkdir -p $DIR_EXP
+DIR_LST=$OUTDIR/lists/$DIR_COMM; mkdir -p $DIR_LST
+DIR_LOG=$OUTDIR/logs/$DIR_COMM; mkdir -p $DIR_LOG
 
 DBG=false
 
@@ -61,6 +68,27 @@ then
     mkdir -p $DIR_EXP
     rm -rf $DIR_CSV 
 fi
+
+# Step 0.5 -> If file_duration <= chunk_size --> only reco
+#
+SPL_DUR=$(soxi -D $FILE)
+if [ $(echo "$SPL_DUR <= $CHUNK_SIZE" | bc) -eq 1 ]; then
+	ii "S0.5 Reco full sample: $FIRST_CHUNK"
+	iii "Using base model"
+	#ACTUAL_CHUNK=$(head -n1 $DIR_LST/$SPL_NAME/${SPL_NAME}_chunked_audios.lst)
+	#CHUNK_NAME=$(basename $ACTUAL_CHUNK .wav)
+	if ! $DBG; then
+	scripts/s01_batched_inference_first_chunk.sh $FILE \
+						     $DIR_ADAPT_HYP \
+						     $DIR_HYP \
+						     $MODEL \
+						     $CONTEXT_LEN \
+						     0 \
+						     0 \
+						     $LANG
+	fi
+else # almost all the script
+
 
 
 # Step 1 - Chop samples
@@ -92,7 +120,8 @@ scripts/s01_batched_inference_first_chunk.sh $ACTUAL_CHUNK \
                                              $MODEL \
                                              $CONTEXT_LEN \
                                              0 \
-                                             $CONTEXT_R
+                                             $CONTEXT_R \
+					     $LANG
 fi
 
 # Step 3 - Prepare CSV for train
@@ -118,7 +147,8 @@ scripts/s03_ft_with_chunk.sh $DIR_CSV/$SPL_NAME/$CHUNK_NAME.csv \
                              $MODEL \
                              $LR $LORA_RANK $LORA_ALPHA \
                              $EPOCH \
-                             $CONF_FILE
+                             $CONF_FILE \
+			     $LANG
 fi
 if [[ $EPOCH -gt 1 ]]
 then
@@ -150,7 +180,8 @@ do
                                       $LORA_RANK $LORA_ALPHA \
                                       $CONTEXT_LEN \
                                       $CONTEXT_L \
-                                      $CONTEXT_R
+                                      $CONTEXT_R \
+				      $LANG
     fi
 
     # Step 6 - Prepare CSV for train
@@ -180,7 +211,8 @@ do
                                  $MODEL \
                                  $LR $LORA_RANK $LORA_ALPHA \
                                  $EPOCH \
-                                 $CONF_FILE
+                                 $CONF_FILE \
+				 $LANG
     fi
     if [[ $EPOCH -gt 1 ]]
     then
@@ -213,15 +245,18 @@ then
                                       $LORA_RANK $LORA_ALPHA \
                                       $CONTEXT_LEN \
                                       $CONTEXT_L \
-                                      $CONTEXT_R
+                                      0 \
+				      $LANG
     fi
 
 #else
 #   # Nothing!
 fi
+fi
 
 ii "Collapsing hypothesis..."
-cat $DIR_HYP/*.txt > $DIR_HYP/full.hyp
+#cat $DIR_HYP/*.txt > $DIR_HYP/full.hyp
+awk '{printf("%s ",$0)} END {print ""}' $DIR_HYP/*.txt > $DIR_HYP/full.hyp
 scripts/postprohyp.sh $DIR_HYP/full.hyp
 
 ii "Deleting chunks dir to optimize space"

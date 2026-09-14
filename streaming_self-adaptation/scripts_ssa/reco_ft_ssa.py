@@ -8,8 +8,8 @@ from espnet2.bin.s2t_inference_ctc_jsj_falseStreaming import Speech2TextGreedySe
 from espnet2.layers.create_adapter_fn import create_lora_adapter
 import espnetez as ez
 
-if len(sys.argv)!=11:
-    sys.exit('%s <audio_path> <chkp_path:path/to/5epoch.pth> <odir_adapt_samples> <odir_hyp> <model> <lora_rank> <lora_alpha> <context_len> <context_left> <context_right>')
+if len(sys.argv)!=12:
+    sys.exit('%s <audio_path> <chkp_path:path/to/5epoch.pth> <odir_adapt_samples> <odir_hyp> <model> <lora_rank> <lora_alpha> <context_len> <context_left> <context_right> <language>')
     
 AUDIO_PATH = sys.argv[1]
 CHKP_PATH = sys.argv[2]
@@ -21,6 +21,7 @@ LORA_ALPHA=int(sys.argv[7])
 CONTEXT = float(sys.argv[8])
 CONLEFT = float(sys.argv[9])
 CONRIGHT = float(sys.argv[10])
+LANGUAGE = sys.argv[11]
 
 EPOCH_NUM = CHKP_PATH.split('/')[-1].split('epoch')[0]
 
@@ -35,43 +36,36 @@ model = Speech2TextGreedySearch.from_pretrained(
     MODEL,
     device="cuda",
     use_flash_attn=False,   # set to True for better efficiency if flash attn is installed and dtype is float16 or bfloat16
-    lang_sym='<eng>',
+    lang_sym=f'<{LANGUAGE}>',
     task_sym='<asr>',
 )
 # Apply LoRA
 print("[ii] Applying adapter")
 create_lora_adapter(model.s2t_model, rank=LORA_RANK, alpha=LORA_ALPHA, dropout_rate=0.1, target_modules=LORA_TARGET)
 model.s2t_model.train()
-# TODO
-# ES IMPORTANTISIM FICAR EL TRAIN DESPRES DE CARREGAR PER A FER EL MERGE
-# TODO
-#print(model.s2t_model.encoder.encoders[0].attn.linear_q.lora_A)
 d = torch.load(CHKP_PATH)
 model.s2t_model.load_state_dict(d, strict=False)
-# TODO
-# ES IMPORTANTISIM FICAR EL EVAL DESPRES DE CARREGAR PER A FER EL MERGE
-# TODO
 model.s2t_model.eval()
-#print(model.s2t_model.encoder.encoders[0].attn.linear_q.lora_A)
 
 print("[ii] Start inference")
-hyp, adapt_spl = model.batch_decode(
+hyp, hyp_timeal, adapt_spl = model.batch_decode(
     [AUDIO_PATH],
     batch_size=4,
     context_len_in_secs=CONTEXT,
     context_right=CONRIGHT,
     context_left=CONLEFT,
-)   # res is a list of str
+)
 
 
 if not os.path.exists(ODIR_HYP):
     os.makedirs(ODIR_HYP)
-NFILE = AUDIO_PATH.split('/')[-1][:-4] + f".ep{EPOCH_NUM}.txt"
-with open(ODIR_HYP + '/' + NFILE, 'w') as f:
+NFILE = AUDIO_PATH.split('/')[-1][:-4] + f".ep{EPOCH_NUM}"
+with open(ODIR_HYP + '/' + NFILE + '.txt', 'w') as f:
     f.write(hyp[0])
+with open(ODIR_HYP + '/' + NFILE + '.nctm', 'w') as f:
+    f.write('\n'.join(hyp_timeal[0]))
 
 for i, SPL in enumerate(adapt_spl):
-    # Cuidao amb el format ;)
     ODIR = ODIR_ADAPT + '/'  + '/'.join(AUDIO_PATH.split('/')[1:])[:-4]
     NFILE = AUDIO_PATH.split('/')[-1][:-4] + '-{:03d}.txt'.format(i)
 

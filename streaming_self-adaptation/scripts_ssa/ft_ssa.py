@@ -10,8 +10,8 @@ from espnet2.bin.s2t_inference_ctc import Speech2Text
 from espnet2.layers.create_adapter_fn import create_lora_adapter
 import espnetez as ez
 
-if len(sys.argv) != 10:
-    sys.exit(f"{sys.argv[0]} <train_csv> <valid_csv> <outdir> <model> <LR> <lora_rank> <lora_alpha> <epoch> <conf.yaml>") 
+if len(sys.argv) != 11:
+    sys.exit(f"{sys.argv[0]} <train_csv> <valid_csv> <outdir> <model> <LR> <lora_rank> <lora_alpha> <epoch> <conf.yaml> <lang>") 
 
 TRAIN_CSV=sys.argv[1]
 VALID_CSV=sys.argv[2]
@@ -22,6 +22,7 @@ LORA_RANK=int(sys.argv[6])
 LORA_ALPHA=int(sys.argv[7])
 EPOCH=int(sys.argv[8])
 CONF_FILE=sys.argv[9]
+LANGUAGE=sys.argv[10]
 
 
 print("[ii] STEP 1 - PREP")
@@ -38,7 +39,6 @@ LORA_TARGET = [
     "linear_q", "linear_v"
 ]
 BEAMSIZE=10
-LANGUAGE = "eng"
 
 
 
@@ -51,7 +51,7 @@ print("[ii] STEP 2 - MODEL")
 pretrained_model = Speech2Text.from_pretrained(
     FINETUNE_MODEL,
     beam_size=BEAMSIZE,
-    lang_sym='<eng>',
+    lang_sym=f'<{LANGUAGE}>',
     task_sym='<asr>',
 ) # Load model to extract configs.
 pretrain_config = vars(pretrained_model.s2t_train_args)
@@ -78,7 +78,7 @@ def build_model_fn(args):
     pretrained_model = Speech2Text.from_pretrained(
         FINETUNE_MODEL,
         beam_size=BEAMSIZE,
-        lang_sym='<eng>',
+        lang_sym=f'<{LANGUAGE}>',
         task_sym='<asr>',
     )
     model = pretrained_model.s2t_model

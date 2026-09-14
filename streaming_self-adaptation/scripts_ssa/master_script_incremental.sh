@@ -21,6 +21,7 @@ VMOD=$(echo $MODEL | awk -F'_' '{print $3}')
         #for TASK in LHCP-2022
         for TASK in LHCP-2020 LHCP-2022
         do
+		LANG=eng # NOTE <-- Important!
         for SET in dev #test
         do
         for WAV in `<lhcp-lists/audios_${TASK}_$SET.lst`
@@ -30,12 +31,9 @@ VMOD=$(echo $MODEL | awk -F'_' '{print $3}')
     NAME=inc_testing.${VMOD}.r$RANK.ep$MAX_EP.lr$LR.cs$CHUNK.$SET.$SAMPLE
     if [[ ! -e out_hyp/incremental.$VMOD/ep$MAX_EP.chsize$CHUNK.lr$LR.r$RANK/$SAMPLE/full.hyp.post.clean ]]
     then
-    qsubmit -n $NAME \
-        -o logs/$NAME.log \
-        -m 20 -gmem 10G \
         scripts/megascript_incremental.sh $MODEL \
             $RANK $MAX_EP $LR $CHUNK \
-            $WAV
+            $WAV $LANG
 
     fi
 
